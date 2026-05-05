@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"context"
 	"time"
 
@@ -31,11 +30,12 @@ func (r *SettingsRepository) Find(ctx context.Context) (map[string]interface{}, 
 
 func (r *SettingsRepository) Update(ctx context.Context, settings map[string]interface{}) error {
 	settings["updatedAt"] = time.Now()
+	opts := options.Update().SetUpsert(true)
 	_, err := r.collection.UpdateOne(
 		ctx,
 		bson.M{},
 		bson.M{"$set": settings},
-		&options.UpdateOptions{Upsert: func(b bool) *bool { return &b }(true)},
+		opts,
 	)
 	return err
 }

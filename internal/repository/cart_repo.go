@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"context"
 	"time"
 
@@ -33,11 +32,12 @@ func (r *CartRepository) Save(ctx context.Context, userID string, cartData map[s
 	cartData["userId"] = userID
 	cartData["updatedAt"] = time.Now()
 
+	opts := options.Update().SetUpsert(true)
 	_, err := r.collection.UpdateOne(
 		ctx,
 		bson.M{"userId": userID},
 		bson.M{"$set": cartData},
-		&options.UpdateOptions{Upsert: func(b bool) *bool { return &b }(true)},
+		opts,
 	)
 	return err
 }
@@ -84,11 +84,12 @@ func (r *CartRepository) AddItem(ctx context.Context, userID string, item map[st
 	cart["items"] = items
 	cart["updatedAt"] = time.Now()
 
+	opts := options.Update().SetUpsert(true)
 	_, err = r.collection.UpdateOne(
 		ctx,
 		bson.M{"userId": userID},
 		bson.M{"$set": cart},
-		&options.UpdateOptions{Upsert: func(b bool) *bool { return &b }(true)},
+		opts,
 	)
 	if err != nil {
 		return nil, err
@@ -126,11 +127,12 @@ func (r *CartRepository) UpdateItemQuantity(ctx context.Context, userID, itemID 
 	cart["items"] = items
 	cart["updatedAt"] = time.Now()
 
+	opts := options.Update().SetUpsert(true)
 	_, err = r.collection.UpdateOne(
 		ctx,
 		bson.M{"userId": userID},
 		bson.M{"$set": cart},
-		&options.UpdateOptions{Upsert: true},
+		opts,
 	)
 	if err != nil {
 		return nil, err
