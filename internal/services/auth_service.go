@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"log"
 
 	"pos-backend/config"
 	"pos-backend/internal/models"
@@ -22,25 +23,36 @@ func NewAuthService(userRepo *repository.UserRepository, cfg *config.Config) *Au
 }
 
 func (s *AuthService) Login(username, password string) (*models.AuthResponse, error) {
+	log.Printf("🔐 Login attempt: username=%s", username)
+	
 	user, err := s.userRepo.FindByUsername(username)
 	if err != nil {
-		return nil, err
-	}
-
-	if user == nil {
+		log.Printf("❌ Database error: %v", err)
 		return nil, errors.New("invalid username or password")
 	}
 
+	if user == nil {
+		log.Printf("❌ User not found: %s", username)
+		return nil, errors.New("invalid username or password")
+	}
+
+	log.Printf("✅ User found: %s, role=%s, active=%v", user.Username, user.Role, user.Active)
+	
+	// Verify password
 	if !utils.CheckPasswordHash(password, user.PasswordHash) {
+		log.Printf("❌ Password mismatch for user: %s", username)
 		return nil, errors.New("invalid username or password")
 	}
 
 	if !user.Active {
+		log.Printf("❌ Account deactivated: %s", username)
 		return nil, errors.New("account is deactivated")
 	}
 
 	// Update last login
-	s.userRepo.UpdateLastLogin(user.ID)
+	if err := s.userRepo.UpdateLastLogin(user.ID); err != nil {
+		log.Printf("⚠️ Failed to update last login: %v", err)
+	}
 
 	// Generate JWT
 	token, err := utils.GenerateJWT(
@@ -51,9 +63,11 @@ func (s *AuthService) Login(username, password string) (*models.AuthResponse, er
 		s.config.JWTExpiry,
 	)
 	if err != nil {
+		log.Printf("❌ Token generation error: %v", err)
 		return nil, err
 	}
 
+	log.Printf("✅ Login successful for user: %s", username)
 	return &models.AuthResponse{
 		Token: token,
 		User: models.UserResponse{
@@ -69,27 +83,34 @@ func (s *AuthService) Login(username, password string) (*models.AuthResponse, er
 }
 
 func (s *AuthService) Register(req *models.RegisterRequest) (*models.AuthResponse, error) {
+	log.Printf("📝 Registering new user: %s", req.Username)
+	
 	// Check if username exists
 	existingUser, err := s.userRepo.FindByUsername(req.Username)
 	if err != nil {
+		log.Printf("❌ Error checking username: %v", err)
 		return nil, err
 	}
 	if existingUser != nil {
+		log.Printf("❌ Username already exists: %s", req.Username)
 		return nil, errors.New("username already exists")
 	}
 
 	// Check if email exists
 	existingEmail, err := s.userRepo.FindByEmail(req.Email)
 	if err != nil {
+		log.Printf("❌ Error checking email: %v", err)
 		return nil, err
 	}
 	if existingEmail != nil {
+		log.Printf("❌ Email already exists: %s", req.Email)
 		return nil, errors.New("email already registered")
 	}
 
 	// Hash password
 	hashedPassword, err := utils.HashPassword(req.Password)
 	if err != nil {
+		log.Printf("❌ Password hashing error: %v", err)
 		return nil, err
 	}
 
@@ -108,8 +129,11 @@ func (s *AuthService) Register(req *models.RegisterRequest) (*models.AuthRespons
 	}
 
 	if err := s.userRepo.Create(user); err != nil {
+		log.Printf("❌ User creation error: %v", err)
 		return nil, err
 	}
+
+	log.Printf("✅ User created successfully: ID=%s, Username=%s", user.ID, user.Username)
 
 	// Generate JWT
 	token, err := utils.GenerateJWT(
@@ -120,6 +144,7 @@ func (s *AuthService) Register(req *models.RegisterRequest) (*models.AuthRespons
 		s.config.JWTExpiry,
 	)
 	if err != nil {
+		log.Printf("❌ Token generation error: %v", err)
 		return nil, err
 	}
 
