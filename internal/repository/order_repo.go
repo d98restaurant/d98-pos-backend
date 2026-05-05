@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"context"
 	"time"
 
@@ -122,8 +121,6 @@ func (r *OrderRepository) UpdateStatus(ctx context.Context, id string, status mo
 }
 
 func (r *OrderRepository) GetNextOrderNumber(ctx context.Context) (int, error) {
-	// This would typically use a counter collection
-	// For simplicity, we'll return a timestamp-based number
 	return int(time.Now().UnixNano() % 1000000), nil
 }
 

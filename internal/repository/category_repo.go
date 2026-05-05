@@ -1,11 +1,8 @@
 package repository
 
 import (
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"context"
 	"time"
-
-	"pos-backend/internal/models"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -27,7 +24,6 @@ func (r *CategoryRepository) Create(ctx context.Context, category *models.Catego
 	category.CreatedAt = time.Now()
 	category.UpdatedAt = time.Now()
 
-	// Get max sort order if not set
 	if category.SortOrder == 0 {
 		var lastCategory models.Category
 		opts := options.FindOne().SetSort(bson.M{"sortOrder": -1})
