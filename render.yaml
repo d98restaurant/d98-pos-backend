@@ -1,0 +1,37 @@
+services:
+  - type: web
+    name: pos-backend
+    runtime: go
+    repo: https://github.com/YOUR_USERNAME/d98-pos-backend
+    plan: starter  # Use starter for production (no sleep)
+    region: singapore  # Choose nearest to your customers
+    branch: main
+    buildCommand: go build -o pos-backend cmd/api/main.go
+    startCommand: ./pos-backend
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: ENVIRONMENT
+        value: production
+      - key: JWT_SECRET
+        value: bb8dc9d18888be7a54a38e9742d5c596cb539ba3855ec1d981a282880f61b1c8
+      - key: JWT_EXPIRY_HOURS
+        value: "168"
+      - key: MONGO_URI
+        value: mongodb+srv://pos:posd98@pos.8iiiieg.mongodb.net/?appName=POS
+      - key: MONGO_DB_NAME
+        value: pos_system
+      - key: RAZORPAY_KEY_ID
+        value: rzp_live_RlSrpAntWBQZ7c
+      - key: RAZORPAY_KEY_SECRET
+        value: 5CLMqfS55PX63GFgONpHD24y
+      - key: RAZORPAY_WEBHOOK_SECRET
+        value: posd98
+      - key: VAPID_PUBLIC_KEY
+        value: BLiNlzBDszn00bfL0w25zye0nz725AzWDHT-9RM-pksxzBbMWiO9W8cVTZdL1W5ouLIAcTMKyFkN4eXq4vAb_Kg
+      - key: VAPID_PRIVATE_KEY
+        value: NAUVzYdtLXUT17EH3rneMyn9AeKmrcEEIz6tJIiw62E
+      - key: FRONTEND_URL
+        value: https://your-frontend.onrender.com  # Update after frontend deploy
+      - key: WS_PING_INTERVAL_SEC
+        value: "30"
