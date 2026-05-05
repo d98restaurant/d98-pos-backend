@@ -22,17 +22,11 @@ func (r *UserRepository) Create(user *models.User) error {
 	user.UpdatedAt = time.Now()
 	user.Active = true
 	
-	// Check if user already exists
-	existing, _ := r.FindByUsername(user.Username)
-	if existing != nil {
-		return fmt.Errorf("user already exists")
-	}
-	
-	seq, _ := GetNextSequence("user_id")
-	user.ID = fmt.Sprintf("%d", seq)
+	// Generate unique ID using timestamp
+	user.ID = fmt.Sprintf("%d", time.Now().UnixNano())
 	
 	log.Printf("📝 Creating user: %s with ID: %s", user.Username, user.ID)
-	log.Printf("   Password hash length: %d", len(user.PasswordHash))
+	log.Printf("   Password length: %d", len(user.PasswordHash))
 	
 	// Save by ID
 	if err := SaveJSON("user:"+user.ID, user); err != nil {
@@ -98,9 +92,6 @@ func (r *UserRepository) FindAll() ([]models.User, error) {
 			if len(key) > 13 && (key[5:13] == "username:" || key[5:10] == "email:") {
 				continue
 			}
-			if len(key) > 10 && key[5:10] == "email:" {
-				continue
-			}
 			
 			item := it.Item()
 			err := item.Value(func(val []byte) error {
@@ -131,7 +122,7 @@ func (r *UserRepository) Update(id string, updates map[string]interface{}) error
 	
 	if passwordHash, ok := updates["passwordHash"]; ok {
 		user.PasswordHash = passwordHash.(string)
-		log.Printf("📝 Updating password hash for user %s", user.Username)
+		log.Printf("📝 Updating password for user %s", user.Username)
 	}
 	if role, ok := updates["role"]; ok {
 		user.Role = models.UserRole(role.(string))
