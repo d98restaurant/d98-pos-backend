@@ -21,8 +21,17 @@ func (r *UserRepository) Create(user *models.User) error {
 	user.UpdatedAt = time.Now()
 	user.Active = true
 	
+	// Check if user already exists
+	existing, _ := r.FindByUsername(user.Username)
+	if existing != nil {
+		return fmt.Errorf("user already exists")
+	}
+	
 	seq, _ := GetNextSequence("user_id")
 	user.ID = fmt.Sprintf("%d", seq)
+	
+	// Log the password hash being stored
+	fmt.Printf("📝 Storing user: %s, hash length: %d\n", user.Username, len(user.PasswordHash))
 	
 	// Save by ID
 	if err := SaveJSON("user:"+user.ID, user); err != nil {
@@ -82,15 +91,11 @@ func (r *UserRepository) FindAll() ([]models.User, error) {
 		prefix := []byte("user:")
 		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 			key := string(it.Item().Key())
-			// Skip index keys (they start with "user:username:" or "user:email:")
-			if len(key) > 5 && (key[:5] == "user:" && (len(key) > 13 && (key[5:13] == "username:" || key[5:10] == "email:"))) {
+			// Skip index keys
+			if len(key) > 13 && (key[5:13] == "username:" || key[5:10] == "email:") {
 				continue
 			}
-			// Also skip if the key contains "username:" or "email:" after "user:"
-			if len(key) > 5 && (len(key) > 13 && key[5:13] == "username:") {
-				continue
-			}
-			if len(key) > 5 && (len(key) > 10 && key[5:10] == "email:") {
+			if len(key) > 10 && key[5:10] == "email:" {
 				continue
 			}
 			
@@ -123,6 +128,7 @@ func (r *UserRepository) Update(id string, updates map[string]interface{}) error
 	
 	if passwordHash, ok := updates["passwordHash"]; ok {
 		user.PasswordHash = passwordHash.(string)
+		fmt.Printf("📝 Updating password hash for user %s, new hash length: %d\n", user.Username, len(user.PasswordHash))
 	}
 	if role, ok := updates["role"]; ok {
 		user.Role = models.UserRole(role.(string))

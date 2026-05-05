@@ -6,7 +6,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-const bcryptCost = 10 // Use cost 10 for good balance
+const bcryptCost = 10
 
 func HashPassword(password string) (string, error) {
 	log.Printf("🔐 Hashing password (length: %d)", len(password))
@@ -15,16 +15,21 @@ func HashPassword(password string) (string, error) {
 		log.Printf("❌ Hash error: %v", err)
 		return "", err
 	}
-	log.Printf("✅ Password hashed successfully, hash: %s", string(bytes)[:20]+"...")
+	log.Printf("✅ Password hashed successfully")
 	return string(bytes), nil
 }
 
 func CheckPasswordHash(password, hash string) bool {
-	log.Printf("🔐 Verifying password (length: %d) against hash (length: %d)", len(password), len(hash))
+	log.Printf("🔐 Verifying password...")
 	
-	// Check if hash is empty or too short
 	if len(hash) == 0 {
 		log.Printf("❌ Empty hash provided")
+		return false
+	}
+	
+	// Check if the hash looks like a bcrypt hash (starts with $2a$ or $2b$)
+	if len(hash) < 3 || (hash[:3] != "$2a" && hash[:3] != "$2b") {
+		log.Printf("❌ Invalid hash format (not bcrypt): %s...", hash[:20])
 		return false
 	}
 	
