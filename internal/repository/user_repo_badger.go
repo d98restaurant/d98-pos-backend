@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -116,7 +117,7 @@ func (r *UserRepository) Update(id string, updates map[string]interface{}) error
 		user.PasswordHash = passwordHash.(string)
 	}
 	if role, ok := updates["role"]; ok {
-		user.Role = role.(models.UserRole)
+		user.Role = models.UserRole(role.(string))
 	}
 	if active, ok := updates["active"]; ok {
 		user.Active = active.(bool)

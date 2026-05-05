@@ -20,19 +20,16 @@ func (r *OrderRepository) Create(order *models.Order) error {
 	order.CreatedAt = time.Now()
 	order.UpdatedAt = time.Now()
 	
-	// Generate order number
 	orderNumber, _ := GetNextSequence("order_number")
 	order.OrderNumber = int(orderNumber)
 	order.ID = fmt.Sprintf("%d", orderNumber)
 	
-	key := "order:" + order.ID
-	return SaveJSON(key, order)
+	return SaveJSON("order:"+order.ID, order)
 }
 
 func (r *OrderRepository) FindByID(id string) (*models.Order, error) {
 	var order models.Order
-	key := "order:" + id
-	err := GetJSON(key, &order)
+	err := GetJSON("order:"+id, &order)
 	if err == badger.ErrKeyNotFound {
 		return nil, nil
 	}
@@ -43,10 +40,8 @@ func (r *OrderRepository) FindAll() ([]models.Order, error) {
 	var orders []models.Order
 	err := DB.View(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
-		opts.PrefetchValues = true
 		it := txn.NewIterator(opts)
 		defer it.Close()
-		
 		prefix := []byte("order:")
 		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 			item := it.Item()
@@ -89,7 +84,6 @@ func (r *OrderRepository) Update(id string, updates map[string]interface{}) erro
 		return fmt.Errorf("order not found")
 	}
 	
-	// Apply updates
 	if status, ok := updates["status"]; ok {
 		order.Status = status.(models.OrderStatus)
 	}
@@ -127,4 +121,14 @@ func (r *OrderRepository) UpdateOrderPayment(id string, paymentMethod string, pa
 	order.CompletedAt = &completedAt
 	
 	return SaveJSON("order:"+id, order)
+}
+
+func (r *OrderRepository) GetNextOrderNumber() (int, error) {
+	seq, err := GetNextSequence("order_number")
+	return int(seq), err
+}
+
+func (r *OrderRepository) FindCreditCustomers() ([]map[string]interface{}, error) {
+	// For BadgerDB, we'll implement this later if needed
+	return []map[string]interface{}{}, nil
 }

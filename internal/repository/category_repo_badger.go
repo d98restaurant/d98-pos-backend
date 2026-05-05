@@ -50,6 +50,15 @@ func (r *CategoryRepository) FindAll() ([]models.Category, error) {
 	return categories, err
 }
 
+func (r *CategoryRepository) FindByID(id string) (*models.Category, error) {
+	var cat models.Category
+	err := GetJSON("category:"+id, &cat)
+	if err == badger.ErrKeyNotFound {
+		return nil, nil
+	}
+	return &cat, err
+}
+
 func (r *CategoryRepository) Update(id string, updates map[string]interface{}) error {
 	var cat models.Category
 	err := GetJSON("category:"+id, &cat)

@@ -2,30 +2,28 @@ package models
 
 import (
 	"time"
-
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type UserRole string
 
 const (
-	RoleAdmin    UserRole = "admin"
-	RoleManager  UserRole = "manager"
-	RoleCashier  UserRole = "cashier"
-	RolePOS      UserRole = "pos"
-	RoleKitchen  UserRole = "kitchen"
+	RoleAdmin   UserRole = "admin"
+	RoleManager UserRole = "manager"
+	RoleCashier UserRole = "cashier"
+	RolePOS     UserRole = "pos"
+	RoleKitchen UserRole = "kitchen"
 )
 
 type User struct {
-	ID           primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
-	Username     string             `bson:"username" json:"username"`
-	Email        string             `bson:"email" json:"email"`
-	PasswordHash string             `bson:"passwordHash" json:"-"`
-	Role         UserRole           `bson:"role" json:"role"`
-	Active       bool               `bson:"active" json:"active"`
-	CreatedAt    time.Time          `bson:"createdAt" json:"createdAt"`
-	UpdatedAt    time.Time          `bson:"updatedAt" json:"updatedAt"`
-	LastLogin    *time.Time         `bson:"lastLogin,omitempty" json:"lastLogin,omitempty"`
+	ID           string     `json:"_id,omitempty"`
+	Username     string     `json:"username"`
+	Email        string     `json:"email"`
+	PasswordHash string     `json:"-"`
+	Role         UserRole   `json:"role"`
+	Active       bool       `json:"active"`
+	CreatedAt    time.Time  `json:"createdAt"`
+	UpdatedAt    time.Time  `json:"updatedAt"`
+	LastLogin    *time.Time `json:"lastLogin,omitempty"`
 }
 
 type LoginRequest struct {
@@ -51,16 +49,16 @@ type UpdateUserRequest struct {
 }
 
 type AuthResponse struct {
-	Token string      `json:"token"`
+	Token string       `json:"token"`
 	User  UserResponse `json:"user"`
 }
 
 type UserResponse struct {
-	ID        string    `json:"_id"`
-	Username  string    `json:"username"`
-	Email     string    `json:"email"`
-	Role      UserRole  `json:"role"`
-	Active    bool      `json:"active"`
-	CreatedAt time.Time `json:"createdAt"`
+	ID        string     `json:"_id"`
+	Username  string     `json:"username"`
+	Email     string     `json:"email"`
+	Role      UserRole   `json:"role"`
+	Active    bool       `json:"active"`
+	CreatedAt time.Time  `json:"createdAt"`
 	LastLogin *time.Time `json:"lastLogin,omitempty"`
 }

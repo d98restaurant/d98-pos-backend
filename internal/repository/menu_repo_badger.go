@@ -50,6 +50,15 @@ func (r *MenuRepository) FindAll() ([]models.MenuItem, error) {
 	return items, err
 }
 
+func (r *MenuRepository) FindByID(id string) (*models.MenuItem, error) {
+	var item models.MenuItem
+	err := GetJSON("menu:"+id, &item)
+	if err == badger.ErrKeyNotFound {
+		return nil, nil
+	}
+	return &item, err
+}
+
 func (r *MenuRepository) Update(id string, updates map[string]interface{}) error {
 	var item models.MenuItem
 	err := GetJSON("menu:"+id, &item)
