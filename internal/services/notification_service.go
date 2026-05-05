@@ -41,7 +41,7 @@ func (s *NotificationService) GetKitchenSubscriberCount() int {
 }
 
 func (s *NotificationService) SendOrderNotification(order *models.Order) {
-	for userID, sub := range s.subscriptions {
+	for userID := range s.subscriptions {
 		log.Printf("🔔 Sending notification to %s: New Order #%d (%s)", 
 			userID, order.OrderNumber, order.OrderType)
 	}
