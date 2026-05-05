@@ -72,7 +72,8 @@ func (h *AuthHandler) GetUsers(c *gin.Context) {
 		utils.InternalServerErrorResponse(c, err.Error())
 		return
 	}
-
+	
+	// Return users directly as an array
 	utils.SuccessResponse(c, users)
 }
 

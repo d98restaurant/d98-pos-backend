@@ -82,10 +82,18 @@ func (r *UserRepository) FindAll() ([]models.User, error) {
 		prefix := []byte("user:")
 		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 			key := string(it.Item().Key())
-			// Skip index keys
-			if key == "user:username:" || key == "user:email:" {
+			// Skip index keys (they start with "user:username:" or "user:email:")
+			if len(key) > 5 && (key[:5] == "user:" && (len(key) > 13 && (key[5:13] == "username:" || key[5:10] == "email:"))) {
 				continue
 			}
+			// Also skip if the key contains "username:" or "email:" after "user:"
+			if len(key) > 5 && (len(key) > 13 && key[5:13] == "username:") {
+				continue
+			}
+			if len(key) > 5 && (len(key) > 10 && key[5:10] == "email:") {
+				continue
+			}
+			
 			item := it.Item()
 			err := item.Value(func(val []byte) error {
 				var user models.User
