@@ -2,7 +2,6 @@ package config
 
 import (
 	"log"
-	"strconv"
 	"time"
 )
 
@@ -62,8 +61,6 @@ func LoadConfig() *Config {
 	log.Printf("   🗄️  Database: BadgerDB at %s", AppConfig.BadgerDBPath)
 	log.Printf("   💳 Razorpay Key: %s", AppConfig.RazorpayKeyID[:10]+"...")
 	log.Printf("   🌐 Frontend URL: %s", AppConfig.FrontendURL)
-	log.Printf("   🔐 JWT Secret: %s...", AppConfig.JWTSecret[:20])
-	log.Printf("   📡 WebSocket Ping Interval: %v", AppConfig.WebSocketPingInterval)
 
 	return AppConfig
 }
