@@ -39,11 +39,12 @@ func (s *AuthService) Login(username, password string) (*models.AuthResponse, er
 	}
 
 	log.Printf("✅ User found: %s", user.Username)
+	log.Printf("   Stored hash length: %d", len(user.PasswordHash))
 	
-	// Direct bcrypt verification
+	// Use bcrypt to verify password
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
 	if err != nil {
-		log.Printf("❌ Password mismatch for user: %s - Error: %v", username, err)
+		log.Printf("❌ Password verification failed: %v", err)
 		return nil, errors.New("invalid username or password")
 	}
 
@@ -106,7 +107,7 @@ func (s *AuthService) Register(req *models.RegisterRequest) (*models.AuthRespons
 		return nil, errors.New("email already registered")
 	}
 
-	// Hash password using bcrypt with cost 10
+	// Hash password using bcrypt
 	hashedBytes, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Printf("❌ Password hashing error: %v", err)
@@ -114,7 +115,8 @@ func (s *AuthService) Register(req *models.RegisterRequest) (*models.AuthRespons
 	}
 	passwordHash := string(hashedBytes)
 	
-	log.Printf("✅ Password hashed successfully - Hash length: %d", len(passwordHash))
+	log.Printf("✅ Password hashed successfully, hash length: %d", len(passwordHash))
+	log.Printf("   Hash prefix: %s", passwordHash[:3])
 
 	// Set default role if not specified
 	role := req.Role
