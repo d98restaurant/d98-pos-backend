@@ -20,32 +20,27 @@ import (
 )
 
 func main() {
-	// Load configuration
 	cfg := config.LoadConfig()
 
-	// Set Gin mode
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	// Initialize database connections
-	mongoClient, err := repository.InitMongoDB(cfg.MongoURI, cfg.MongoDBName)
+	// Initialize BadgerDB (no MongoDB needed!)
+	_, err := repository.InitBadgerDB(cfg.BadgerDBPath)
 	if err != nil {
-		log.Fatalf("Failed to connect to MongoDB: %v", err)
+		log.Fatalf("Failed to initialize BadgerDB: %v", err)
 	}
-	defer mongoClient.Disconnect(context.Background())
-	log.Println("✅ Connected to MongoDB Atlas")
+	defer repository.CloseDB()
+	log.Println("✅ BadgerDB connected - Lightning fast embedded database")
 
 	// Initialize repositories
-	userRepo := repository.NewUserRepository(mongoClient, cfg.MongoDBName)
-	orderRepo := repository.NewOrderRepository(mongoClient, cfg.MongoDBName)
-	menuRepo := repository.NewMenuRepository(mongoClient, cfg.MongoDBName)
-	categoryRepo := repository.NewCategoryRepository(mongoClient, cfg.MongoDBName)
-	tableRepo := repository.NewTableRepository(mongoClient, cfg.MongoDBName)
-	cartRepo := repository.NewCartRepository(mongoClient, cfg.MongoDBName)
-	receiptRepo := repository.NewReceiptRepository(mongoClient, cfg.MongoDBName)
-	businessRepo := repository.NewBusinessRepository(mongoClient, cfg.MongoDBName)
-	settingsRepo := repository.NewSettingsRepository(mongoClient, cfg.MongoDBName)
+	userRepo := repository.NewUserRepository()
+	orderRepo := repository.NewOrderRepository()
+	menuRepo := repository.NewMenuRepository()
+	categoryRepo := repository.NewCategoryRepository()
+	tableRepo := repository.NewTableRepository()
+	cartRepo := repository.NewCartRepository()
 
 	// Initialize services
 	authService := services.NewAuthService(userRepo, cfg)
@@ -53,7 +48,7 @@ func main() {
 	notificationService := services.NewNotificationService(cfg)
 	orderService := services.NewOrderService(orderRepo, tableRepo, menuRepo, notificationService)
 
-	// Initialize WebSocket hub
+	// WebSocket hub for real-time updates
 	wsHub := utils.NewHub()
 	go wsHub.Run()
 	log.Println("✅ WebSocket hub started")
@@ -65,16 +60,12 @@ func main() {
 	categoryHandler := handlers.NewCategoryHandler(categoryRepo)
 	tableHandler := handlers.NewTableHandler(tableRepo)
 	cartHandler := handlers.NewCartHandler(cartRepo)
-	receiptHandler := handlers.NewReceiptHandler(receiptRepo, businessRepo)
 	paymentHandler := handlers.NewPaymentHandler(paymentService, orderService)
-	businessHandler := handlers.NewBusinessHandler(businessRepo)
-	settingsHandler := handlers.NewSettingsHandler(settingsRepo)
-	notificationHandler := handlers.NewNotificationHandler(notificationService)
 
 	// Setup Gin router
 	router := gin.Default()
 
-	// Middleware (with proper CORS for production)
+	// Middleware
 	router.Use(middleware.CORS(cfg.FrontendURL))
 	router.Use(middleware.Logger())
 	router.Use(middleware.Recovery())
@@ -84,18 +75,19 @@ func main() {
 		utils.ServeWebSocket(wsHub, c.Writer, c.Request)
 	})
 
+	// Health check endpoint
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"status":      "ok",
+			"timestamp":   time.Now().Unix(),
+			"environment": cfg.Environment,
+			"database":    "badgerdb",
+		})
+	})
+
 	// API routes
 	api := router.Group("/api")
 	{
-		// Public routes (no auth required)
-		router.GET("/health", func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{
-				"status":    "ok",
-				"timestamp": time.Now().Unix(),
-				"environment": cfg.Environment,
-			})
-		})
-
 		// Auth routes (public)
 		auth := api.Group("/auth")
 		{
@@ -159,27 +151,10 @@ func main() {
 			protected.DELETE("/cart/items/:itemId", cartHandler.RemoveItem)
 			protected.DELETE("/cart/clear", cartHandler.ClearCart)
 
-			// Receipt routes
-			protected.GET("/receipts/:id", receiptHandler.GetReceipt)
-			protected.POST("/receipts", receiptHandler.CreateReceipt)
-
 			// Payment routes
 			protected.POST("/payments/create-order", paymentHandler.CreateRazorpayOrder)
 			protected.POST("/payments/verify", paymentHandler.VerifyPayment)
 			protected.POST("/payments/credit-sale", paymentHandler.ProcessCreditSale)
-
-			// Business routes
-			protected.GET("/business", businessHandler.GetBusiness)
-			protected.POST("/business", businessHandler.UpdateBusiness)
-
-			// Settings routes
-			protected.GET("/settings", settingsHandler.GetSettings)
-			protected.POST("/settings", settingsHandler.UpdateSettings)
-
-			// Notification routes
-			protected.POST("/notifications/subscribe", notificationHandler.Subscribe)
-			protected.POST("/notifications/unsubscribe", notificationHandler.Unsubscribe)
-			protected.GET("/notifications/vapid-public-key", notificationHandler.GetVAPIDPublicKey)
 		}
 	}
 
@@ -189,10 +164,11 @@ func main() {
 		Handler: router,
 	}
 
-	// Graceful shutdown
 	go func() {
 		log.Printf("🚀 Server starting on port %s", cfg.Port)
 		log.Printf("📍 Environment: %s", cfg.Environment)
+		log.Printf("🗄️  Database: BadgerDB at %s", cfg.BadgerDBPath)
+		log.Printf("💳 Razorpay Key: %s", cfg.RazorpayKeyID[:10]+"...")
 		log.Printf("🌐 Health check: http://localhost:%s/health", cfg.Port)
 		
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -200,7 +176,7 @@ func main() {
 		}
 	}()
 
-	// Wait for interrupt signal
+	// Graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
