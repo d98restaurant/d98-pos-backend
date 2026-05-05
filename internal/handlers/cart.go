@@ -17,7 +17,7 @@ func NewCartHandler(repo *repository.CartRepository) *CartHandler {
 
 func (h *CartHandler) GetCart(c *gin.Context) {
 	userID := c.GetString("userID")
-	cart, err := h.repo.FindByUserID(c.Request.Context(), userID)
+	cart, err := h.repo.FindByUserID(userID)
 	if err != nil {
 		utils.InternalServerErrorResponse(c, err.Error())
 		return
@@ -39,7 +39,7 @@ func (h *CartHandler) SaveCart(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.Save(c.Request.Context(), userID, cartData); err != nil {
+	if err := h.repo.Save(userID, cartData); err != nil {
 		utils.InternalServerErrorResponse(c, err.Error())
 		return
 	}
@@ -57,7 +57,7 @@ func (h *CartHandler) AddItem(c *gin.Context) {
 		return
 	}
 
-	cart, err := h.repo.AddItem(c.Request.Context(), userID, req.Item)
+	cart, err := h.repo.AddItem(userID, req.Item)
 	if err != nil {
 		utils.InternalServerErrorResponse(c, err.Error())
 		return
@@ -77,7 +77,7 @@ func (h *CartHandler) UpdateItemQuantity(c *gin.Context) {
 		return
 	}
 
-	cart, err := h.repo.UpdateItemQuantity(c.Request.Context(), userID, itemID, req.Quantity)
+	cart, err := h.repo.UpdateItemQuantity(userID, itemID, req.Quantity)
 	if err != nil {
 		utils.InternalServerErrorResponse(c, err.Error())
 		return
@@ -90,7 +90,7 @@ func (h *CartHandler) RemoveItem(c *gin.Context) {
 	userID := c.GetString("userID")
 	itemID := c.Param("itemId")
 
-	cart, err := h.repo.RemoveItem(c.Request.Context(), userID, itemID)
+	cart, err := h.repo.RemoveItem(userID, itemID)
 	if err != nil {
 		utils.InternalServerErrorResponse(c, err.Error())
 		return
@@ -102,7 +102,7 @@ func (h *CartHandler) RemoveItem(c *gin.Context) {
 func (h *CartHandler) ClearCart(c *gin.Context) {
 	userID := c.GetString("userID")
 
-	if err := h.repo.Clear(c.Request.Context(), userID); err != nil {
+	if err := h.repo.Clear(userID); err != nil {
 		utils.InternalServerErrorResponse(c, err.Error())
 		return
 	}

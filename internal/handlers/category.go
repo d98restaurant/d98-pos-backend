@@ -6,7 +6,6 @@ import (
 	"pos-backend/internal/utils"
 
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/bson"
 )
 
 type CategoryHandler struct {
@@ -18,7 +17,7 @@ func NewCategoryHandler(repo *repository.CategoryRepository) *CategoryHandler {
 }
 
 func (h *CategoryHandler) GetCategories(c *gin.Context) {
-	categories, err := h.repo.FindAll(c.Request.Context())
+	categories, err := h.repo.FindAll()
 	if err != nil {
 		utils.InternalServerErrorResponse(c, err.Error())
 		return
@@ -33,7 +32,7 @@ func (h *CategoryHandler) CreateCategory(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.Create(c.Request.Context(), &category); err != nil {
+	if err := h.repo.Create(&category); err != nil {
 		utils.InternalServerErrorResponse(c, err.Error())
 		return
 	}
@@ -49,7 +48,7 @@ func (h *CategoryHandler) UpdateCategory(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.Update(c.Request.Context(), id, updates); err != nil {
+	if err := h.repo.Update(id, updates); err != nil {
 		utils.InternalServerErrorResponse(c, err.Error())
 		return
 	}
@@ -59,7 +58,7 @@ func (h *CategoryHandler) UpdateCategory(c *gin.Context) {
 
 func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
 	id := c.Param("id")
-	if err := h.repo.Delete(c.Request.Context(), id); err != nil {
+	if err := h.repo.Delete(id); err != nil {
 		utils.InternalServerErrorResponse(c, err.Error())
 		return
 	}
@@ -80,7 +79,7 @@ func (h *CategoryHandler) ReorderCategories(c *gin.Context) {
 	}
 
 	for _, cat := range req.Categories {
-		if err := h.repo.Update(c.Request.Context(), cat.ID, bson.M{"sortOrder": cat.SortOrder}); err != nil {
+		if err := h.repo.Update(cat.ID, map[string]interface{}{"sortOrder": cat.SortOrder}); err != nil {
 			utils.InternalServerErrorResponse(c, err.Error())
 			return
 		}

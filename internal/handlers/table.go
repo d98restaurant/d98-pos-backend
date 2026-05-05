@@ -19,7 +19,7 @@ func NewTableHandler(repo *repository.TableRepository) *TableHandler {
 }
 
 func (h *TableHandler) GetTables(c *gin.Context) {
-	tables, err := h.repo.FindAll(c.Request.Context())
+	tables, err := h.repo.FindAll()
 	if err != nil {
 		utils.InternalServerErrorResponse(c, err.Error())
 		return
@@ -34,7 +34,7 @@ func (h *TableHandler) GetTableByNumber(c *gin.Context) {
 		return
 	}
 
-	table, err := h.repo.FindByNumber(c.Request.Context(), tableNumber)
+	table, err := h.repo.FindByNumber(tableNumber)
 	if err != nil {
 		utils.InternalServerErrorResponse(c, err.Error())
 		return
@@ -54,7 +54,7 @@ func (h *TableHandler) CreateTable(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.Create(c.Request.Context(), &table); err != nil {
+	if err := h.repo.Create(&table); err != nil {
 		utils.InternalServerErrorResponse(c, err.Error())
 		return
 	}
@@ -75,7 +75,7 @@ func (h *TableHandler) UpdateTable(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.UpdateByNumber(c.Request.Context(), tableNumber, updates); err != nil {
+	if err := h.repo.UpdateByNumber(tableNumber, updates); err != nil {
 		utils.InternalServerErrorResponse(c, err.Error())
 		return
 	}
@@ -90,7 +90,7 @@ func (h *TableHandler) DeleteTable(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.DeleteByNumber(c.Request.Context(), tableNumber); err != nil {
+	if err := h.repo.DeleteByNumber(tableNumber); err != nil {
 		utils.InternalServerErrorResponse(c, err.Error())
 		return
 	}

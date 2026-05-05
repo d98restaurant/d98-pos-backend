@@ -21,21 +21,21 @@ func NewMenuHandler(menuRepo *repository.MenuRepository, categoryRepo *repositor
 }
 
 func (h *MenuHandler) GetMenu(c *gin.Context) {
-	items, err := h.menuRepo.FindAll(c.Request.Context())
+	items, err := h.menuRepo.FindAll()
 	if err != nil {
 		utils.InternalServerErrorResponse(c, err.Error())
 		return
 	}
 
 	// Enrich with category names
-	categories, _ := h.categoryRepo.FindAll(c.Request.Context())
+	categories, _ := h.categoryRepo.FindAll()
 	categoryMap := make(map[string]string)
 	for _, cat := range categories {
-		categoryMap[cat.ID.Hex()] = cat.Name
+		categoryMap[cat.ID] = cat.Name
 	}
 
 	for i := range items {
-		if name, ok := categoryMap[items[i].Category.Hex()]; ok {
+		if name, ok := categoryMap[items[i].Category]; ok {
 			items[i].CategoryName = name
 		}
 	}
@@ -50,7 +50,7 @@ func (h *MenuHandler) CreateMenuItem(c *gin.Context) {
 		return
 	}
 
-	if err := h.menuRepo.Create(c.Request.Context(), &item); err != nil {
+	if err := h.menuRepo.Create(&item); err != nil {
 		utils.InternalServerErrorResponse(c, err.Error())
 		return
 	}
@@ -66,7 +66,7 @@ func (h *MenuHandler) UpdateMenuItem(c *gin.Context) {
 		return
 	}
 
-	if err := h.menuRepo.Update(c.Request.Context(), id, updates); err != nil {
+	if err := h.menuRepo.Update(id, updates); err != nil {
 		utils.InternalServerErrorResponse(c, err.Error())
 		return
 	}
@@ -76,7 +76,7 @@ func (h *MenuHandler) UpdateMenuItem(c *gin.Context) {
 
 func (h *MenuHandler) DeleteMenuItem(c *gin.Context) {
 	id := c.Param("id")
-	if err := h.menuRepo.Delete(c.Request.Context(), id); err != nil {
+	if err := h.menuRepo.Delete(id); err != nil {
 		utils.InternalServerErrorResponse(c, err.Error())
 		return
 	}
