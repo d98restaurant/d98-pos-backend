@@ -2,7 +2,6 @@ package services
 
 import (
 	"errors"
-	"fmt"
 	"log"
 
 	"pos-backend/config"
@@ -116,7 +115,6 @@ func (s *AuthService) Register(req *models.RegisterRequest) (*models.AuthRespons
 	passwordHash := string(hashedBytes)
 	
 	log.Printf("✅ Password hashed successfully - Hash length: %d", len(passwordHash))
-	log.Printf("   Hash prefix: %s", passwordHash[:3])
 
 	// Set default role if not specified
 	role := req.Role
