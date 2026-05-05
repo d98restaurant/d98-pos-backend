@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"fmt"
 	"log"
 
 	"pos-backend/config"
@@ -39,18 +40,11 @@ func (s *AuthService) Login(username, password string) (*models.AuthResponse, er
 	}
 
 	log.Printf("✅ User found: %s", user.Username)
-	log.Printf("   Role: %s, Active: %v", user.Role, user.Active)
-	log.Printf("   Stored hash length: %d", len(user.PasswordHash))
 	
-	// Try bcrypt verification
+	// Direct bcrypt verification
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
 	if err != nil {
-		log.Printf("❌ Password verification failed: %v", err)
-		
-		// For debugging: Check if the hash is valid bcrypt format
-		if len(user.PasswordHash) > 3 {
-			log.Printf("   Hash prefix: %s", user.PasswordHash[:3])
-		}
+		log.Printf("❌ Password mismatch for user: %s - Error: %v", username, err)
 		return nil, errors.New("invalid username or password")
 	}
 
@@ -113,14 +107,16 @@ func (s *AuthService) Register(req *models.RegisterRequest) (*models.AuthRespons
 		return nil, errors.New("email already registered")
 	}
 
-	// Hash password using bcrypt
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	// Hash password using bcrypt with cost 10
+	hashedBytes, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Printf("❌ Password hashing error: %v", err)
-		return nil, err
+		return nil, errors.New("failed to hash password")
 	}
-	passwordHash := string(hashedPassword)
-	log.Printf("✅ Password hashed, hash length: %d", len(passwordHash))
+	passwordHash := string(hashedBytes)
+	
+	log.Printf("✅ Password hashed successfully - Hash length: %d", len(passwordHash))
+	log.Printf("   Hash prefix: %s", passwordHash[:3])
 
 	// Set default role if not specified
 	role := req.Role

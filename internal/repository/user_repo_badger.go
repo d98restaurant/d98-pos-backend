@@ -3,6 +3,7 @@ package repository
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 
 	"pos-backend/internal/models"
@@ -30,8 +31,8 @@ func (r *UserRepository) Create(user *models.User) error {
 	seq, _ := GetNextSequence("user_id")
 	user.ID = fmt.Sprintf("%d", seq)
 	
-	// Log the password hash being stored
-	fmt.Printf("📝 Storing user: %s, hash length: %d\n", user.Username, len(user.PasswordHash))
+	log.Printf("📝 Creating user: %s with ID: %s", user.Username, user.ID)
+	log.Printf("   Password hash length: %d", len(user.PasswordHash))
 	
 	// Save by ID
 	if err := SaveJSON("user:"+user.ID, user); err != nil {
@@ -45,6 +46,8 @@ func (r *UserRepository) Create(user *models.User) error {
 	if err := SaveJSON("user:email:"+user.Email, user.ID); err != nil {
 		return err
 	}
+	
+	log.Printf("✅ User saved successfully")
 	return nil
 }
 
@@ -128,7 +131,7 @@ func (r *UserRepository) Update(id string, updates map[string]interface{}) error
 	
 	if passwordHash, ok := updates["passwordHash"]; ok {
 		user.PasswordHash = passwordHash.(string)
-		fmt.Printf("📝 Updating password hash for user %s, new hash length: %d\n", user.Username, len(user.PasswordHash))
+		log.Printf("📝 Updating password hash for user %s", user.Username)
 	}
 	if role, ok := updates["role"]; ok {
 		user.Role = models.UserRole(role.(string))
