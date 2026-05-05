@@ -1,9 +1,6 @@
 package repository
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"github.com/dgraph-io/badger/v4"
 )
 
@@ -14,9 +11,9 @@ func NewCartRepository() *CartRepository {
 }
 
 type Cart struct {
-	UserID              string                 `json:"userId"`
+	UserID              string                   `json:"userId"`
 	Items               []map[string]interface{} `json:"items"`
-	SpecialInstructions map[string]string      `json:"specialInstructions"`
+	SpecialInstructions map[string]string        `json:"specialInstructions"`
 }
 
 func (r *CartRepository) FindByUserID(userID string) (*Cart, error) {
