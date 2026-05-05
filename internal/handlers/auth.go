@@ -1,7 +1,6 @@
 package handlers
 
 import (
-
 	"pos-backend/internal/models"
 	"pos-backend/internal/services"
 	"pos-backend/internal/utils"
@@ -26,7 +25,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.authService.Login(c.Request.Context(), req.Username, req.Password)
+	resp, err := h.authService.Login(req.Username, req.Password)
 	if err != nil {
 		utils.UnauthorizedResponse(c, err.Error())
 		return
@@ -42,7 +41,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.authService.Register(c.Request.Context(), &req)
+	resp, err := h.authService.Register(&req)
 	if err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
@@ -59,7 +58,7 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	}
 
 	userID := c.GetString("userID")
-	if err := h.authService.ChangePassword(c.Request.Context(), userID, req.OldPassword, req.NewPassword); err != nil {
+	if err := h.authService.ChangePassword(userID, req.OldPassword, req.NewPassword); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -68,7 +67,7 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 }
 
 func (h *AuthHandler) GetUsers(c *gin.Context) {
-	users, err := h.authService.GetUsers(c.Request.Context())
+	users, err := h.authService.GetUsers()
 	if err != nil {
 		utils.InternalServerErrorResponse(c, err.Error())
 		return
@@ -85,7 +84,7 @@ func (h *AuthHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	if err := h.authService.UpdateUser(c.Request.Context(), userID, &req); err != nil {
+	if err := h.authService.UpdateUser(userID, &req); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -96,14 +95,13 @@ func (h *AuthHandler) UpdateUser(c *gin.Context) {
 func (h *AuthHandler) DeleteUser(c *gin.Context) {
 	userID := c.Param("id")
 
-	// Prevent self-deletion
 	currentUserID := c.GetString("userID")
 	if userID == currentUserID {
 		utils.BadRequestResponse(c, "Cannot delete your own account")
 		return
 	}
 
-	if err := h.authService.DeleteUser(c.Request.Context(), userID); err != nil {
+	if err := h.authService.DeleteUser(userID); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}

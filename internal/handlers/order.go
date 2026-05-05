@@ -23,7 +23,7 @@ func NewOrderHandler(orderService *services.OrderService, wsHub *utils.Hub) *Ord
 }
 
 func (h *OrderHandler) GetOrders(c *gin.Context) {
-	orders, err := h.orderService.GetAllOrders(c.Request.Context())
+	orders, err := h.orderService.GetAllOrders(nil)
 	if err != nil {
 		utils.InternalServerErrorResponse(c, err.Error())
 		return
@@ -33,7 +33,7 @@ func (h *OrderHandler) GetOrders(c *gin.Context) {
 
 func (h *OrderHandler) GetOrderByID(c *gin.Context) {
 	id := c.Param("id")
-	order, err := h.orderService.GetOrderByID(c.Request.Context(), id)
+	order, err := h.orderService.GetOrderByID(nil, id)
 	if err != nil {
 		utils.NotFoundResponse(c, err.Error())
 		return
@@ -48,7 +48,7 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 		return
 	}
 
-	createdOrder, err := h.orderService.CreateOrder(c.Request.Context(), &order)
+	createdOrder, err := h.orderService.CreateOrder(nil, &order)
 	if err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
@@ -70,7 +70,7 @@ func (h *OrderHandler) UpdateOrderStatus(c *gin.Context) {
 		return
 	}
 
-	updatedOrder, err := h.orderService.UpdateOrderStatus(c.Request.Context(), id, req.Status)
+	updatedOrder, err := h.orderService.UpdateOrderStatus(nil, id, req.Status)
 	if err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
@@ -100,7 +100,7 @@ func (h *OrderHandler) CompletePayment(c *gin.Context) {
 		return
 	}
 
-	updatedOrder, err := h.orderService.CompletePayment(c.Request.Context(), id, req.PaymentMethod, req.PaymentDetails)
+	updatedOrder, err := h.orderService.CompletePayment(nil, id, req.PaymentMethod, req.PaymentDetails)
 	if err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
@@ -122,7 +122,7 @@ func (h *OrderHandler) AddItemToOrder(c *gin.Context) {
 		return
 	}
 
-	updatedOrder, err := h.orderService.AddItemToOrder(c.Request.Context(), id, &req.Item)
+	updatedOrder, err := h.orderService.AddItemToOrder(nil, id, &req.Item)
 	if err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
@@ -148,7 +148,7 @@ func (h *OrderHandler) UpdateItemQuantity(c *gin.Context) {
 		return
 	}
 
-	updatedOrder, err := h.orderService.UpdateItemQuantity(c.Request.Context(), orderID, itemID, req.Quantity)
+	updatedOrder, err := h.orderService.UpdateItemQuantity(nil, orderID, itemID, req.Quantity)
 	if err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
@@ -168,7 +168,7 @@ func (h *OrderHandler) RemoveItemFromOrder(c *gin.Context) {
 	orderID := c.Param("id")
 	itemID := c.Param("itemId")
 
-	updatedOrder, err := h.orderService.RemoveItemFromOrder(c.Request.Context(), orderID, itemID)
+	updatedOrder, err := h.orderService.RemoveItemFromOrder(nil, orderID, itemID)
 	if err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
@@ -194,7 +194,7 @@ func (h *OrderHandler) UpdateItemStatus(c *gin.Context) {
 		return
 	}
 
-	updatedOrder, err := h.orderService.UpdateItemStatus(c.Request.Context(), orderID, itemID, req.Status)
+	updatedOrder, err := h.orderService.UpdateItemStatus(nil, orderID, itemID, req.Status)
 	if err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
@@ -212,7 +212,7 @@ func (h *OrderHandler) GetActiveOrdersByTable(c *gin.Context) {
 		return
 	}
 
-	orders, err := h.orderService.GetActiveOrdersByTable(c.Request.Context(), tableNumber)
+	orders, err := h.orderService.GetActiveOrdersByTable(nil, tableNumber)
 	if err != nil {
 		utils.InternalServerErrorResponse(c, err.Error())
 		return
@@ -236,7 +236,7 @@ func (h *OrderHandler) CompleteTableBilling(c *gin.Context) {
 		return
 	}
 
-	if err := h.orderService.CompleteTableBilling(c.Request.Context(), tableNumber, req.SessionID); err != nil {
+	if err := h.orderService.CompleteTableBilling(nil, tableNumber, req.SessionID); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -245,7 +245,7 @@ func (h *OrderHandler) CompleteTableBilling(c *gin.Context) {
 }
 
 func (h *OrderHandler) GetPendingCancellationRequests(c *gin.Context) {
-	requests, err := h.orderService.GetPendingCancellationRequests(c.Request.Context())
+	requests, err := h.orderService.GetPendingCancellationRequests(nil)
 	if err != nil {
 		utils.InternalServerErrorResponse(c, err.Error())
 		return
@@ -263,7 +263,7 @@ func (h *OrderHandler) RequestItemCancellation(c *gin.Context) {
 		req.Reason = ""
 	}
 
-	err := h.orderService.RequestItemCancellation(c.Request.Context(), orderID, itemID, req.Reason)
+	err := h.orderService.RequestItemCancellation(nil, orderID, itemID, req.Reason)
 	if err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
@@ -282,7 +282,7 @@ func (h *OrderHandler) ApproveCancellation(c *gin.Context) {
 	orderID := c.Param("id")
 	itemID := c.Param("itemId")
 
-	updatedOrder, err := h.orderService.ApproveCancellation(c.Request.Context(), orderID, itemID)
+	updatedOrder, err := h.orderService.ApproveCancellation(nil, orderID, itemID)
 	if err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
@@ -306,7 +306,7 @@ func (h *OrderHandler) RejectCancellation(c *gin.Context) {
 		req.RejectReason = ""
 	}
 
-	err := h.orderService.RejectCancellation(c.Request.Context(), orderID, itemID, req.RejectReason)
+	err := h.orderService.RejectCancellation(nil, orderID, itemID, req.RejectReason)
 	if err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
@@ -322,7 +322,7 @@ func (h *OrderHandler) RejectCancellation(c *gin.Context) {
 }
 
 func (h *OrderHandler) GetCreditCustomers(c *gin.Context) {
-	customers, err := h.orderService.GetCreditCustomers(c.Request.Context())
+	customers, err := h.orderService.GetCreditCustomers(nil)
 	if err != nil {
 		utils.InternalServerErrorResponse(c, err.Error())
 		return
@@ -343,7 +343,7 @@ func (h *OrderHandler) ProcessCreditCollection(c *gin.Context) {
 		return
 	}
 
-	if err := h.orderService.ProcessCreditCollection(c.Request.Context(), req.CustomerID, req.Amount, req.PaymentMethod, req.Note, req.CollectedBy); err != nil {
+	if err := h.orderService.ProcessCreditCollection(nil, req.CustomerID, req.Amount, req.PaymentMethod, req.Note, req.CollectedBy); err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return
 	}
@@ -362,7 +362,7 @@ func (h *OrderHandler) ChangePaymentMethod(c *gin.Context) {
 		return
 	}
 
-	updatedOrder, err := h.orderService.ChangePaymentMethod(c.Request.Context(), id, req.PaymentMethod, req.Reason)
+	updatedOrder, err := h.orderService.ChangePaymentMethod(nil, id, req.PaymentMethod, req.Reason)
 	if err != nil {
 		utils.BadRequestResponse(c, err.Error())
 		return

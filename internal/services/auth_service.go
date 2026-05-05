@@ -1,15 +1,12 @@
 package services
 
 import (
-	"context"
 	"errors"
 
 	"pos-backend/config"
 	"pos-backend/internal/models"
 	"pos-backend/internal/repository"
 	"pos-backend/internal/utils"
-
-	"go.mongodb.org/mongo-driver/bson"
 )
 
 type AuthService struct {
@@ -24,8 +21,8 @@ func NewAuthService(userRepo *repository.UserRepository, cfg *config.Config) *Au
 	}
 }
 
-func (s *AuthService) Login(ctx context.Context, username, password string) (*models.AuthResponse, error) {
-	user, err := s.userRepo.FindByUsername(ctx, username)
+func (s *AuthService) Login(username, password string) (*models.AuthResponse, error) {
+	user, err := s.userRepo.FindByUsername(username)
 	if err != nil {
 		return nil, err
 	}
@@ -43,11 +40,11 @@ func (s *AuthService) Login(ctx context.Context, username, password string) (*mo
 	}
 
 	// Update last login
-	s.userRepo.UpdateLastLogin(ctx, user.ID.Hex())
+	s.userRepo.UpdateLastLogin(user.ID)
 
 	// Generate JWT
 	token, err := utils.GenerateJWT(
-		user.ID.Hex(),
+		user.ID,
 		user.Username,
 		string(user.Role),
 		s.config.JWTSecret,
@@ -60,7 +57,7 @@ func (s *AuthService) Login(ctx context.Context, username, password string) (*mo
 	return &models.AuthResponse{
 		Token: token,
 		User: models.UserResponse{
-			ID:        user.ID.Hex(),
+			ID:        user.ID,
 			Username:  user.Username,
 			Email:     user.Email,
 			Role:      user.Role,
@@ -71,9 +68,9 @@ func (s *AuthService) Login(ctx context.Context, username, password string) (*mo
 	}, nil
 }
 
-func (s *AuthService) Register(ctx context.Context, req *models.RegisterRequest) (*models.AuthResponse, error) {
+func (s *AuthService) Register(req *models.RegisterRequest) (*models.AuthResponse, error) {
 	// Check if username exists
-	existingUser, err := s.userRepo.FindByUsername(ctx, req.Username)
+	existingUser, err := s.userRepo.FindByUsername(req.Username)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +79,7 @@ func (s *AuthService) Register(ctx context.Context, req *models.RegisterRequest)
 	}
 
 	// Check if email exists
-	existingEmail, err := s.userRepo.FindByEmail(ctx, req.Email)
+	existingEmail, err := s.userRepo.FindByEmail(req.Email)
 	if err != nil {
 		return nil, err
 	}
@@ -110,13 +107,13 @@ func (s *AuthService) Register(ctx context.Context, req *models.RegisterRequest)
 		Active:       true,
 	}
 
-	if err := s.userRepo.Create(ctx, user); err != nil {
+	if err := s.userRepo.Create(user); err != nil {
 		return nil, err
 	}
 
 	// Generate JWT
 	token, err := utils.GenerateJWT(
-		user.ID.Hex(),
+		user.ID,
 		user.Username,
 		string(user.Role),
 		s.config.JWTSecret,
@@ -129,7 +126,7 @@ func (s *AuthService) Register(ctx context.Context, req *models.RegisterRequest)
 	return &models.AuthResponse{
 		Token: token,
 		User: models.UserResponse{
-			ID:        user.ID.Hex(),
+			ID:        user.ID,
 			Username:  user.Username,
 			Email:     user.Email,
 			Role:      user.Role,
@@ -139,8 +136,8 @@ func (s *AuthService) Register(ctx context.Context, req *models.RegisterRequest)
 	}, nil
 }
 
-func (s *AuthService) ChangePassword(ctx context.Context, userID, oldPassword, newPassword string) error {
-	user, err := s.userRepo.FindByID(ctx, userID)
+func (s *AuthService) ChangePassword(userID, oldPassword, newPassword string) error {
+	user, err := s.userRepo.FindByID(userID)
 	if err != nil {
 		return err
 	}
@@ -157,11 +154,11 @@ func (s *AuthService) ChangePassword(ctx context.Context, userID, oldPassword, n
 		return err
 	}
 
-	return s.userRepo.Update(ctx, userID, bson.M{"passwordHash": newHash})
+	return s.userRepo.Update(userID, map[string]interface{}{"passwordHash": newHash})
 }
 
-func (s *AuthService) GetUsers(ctx context.Context) ([]models.UserResponse, error) {
-	users, err := s.userRepo.FindAll(ctx)
+func (s *AuthService) GetUsers() ([]models.UserResponse, error) {
+	users, err := s.userRepo.FindAll()
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +166,7 @@ func (s *AuthService) GetUsers(ctx context.Context) ([]models.UserResponse, erro
 	responses := make([]models.UserResponse, len(users))
 	for i, user := range users {
 		responses[i] = models.UserResponse{
-			ID:        user.ID.Hex(),
+			ID:        user.ID,
 			Username:  user.Username,
 			Email:     user.Email,
 			Role:      user.Role,
@@ -181,14 +178,14 @@ func (s *AuthService) GetUsers(ctx context.Context) ([]models.UserResponse, erro
 	return responses, nil
 }
 
-func (s *AuthService) UpdateUser(ctx context.Context, userID string, req *models.UpdateUserRequest) error {
-	updates := bson.M{
+func (s *AuthService) UpdateUser(userID string, req *models.UpdateUserRequest) error {
+	updates := map[string]interface{}{
 		"role":   req.Role,
 		"active": req.Active,
 	}
-	return s.userRepo.Update(ctx, userID, updates)
+	return s.userRepo.Update(userID, updates)
 }
 
-func (s *AuthService) DeleteUser(ctx context.Context, userID string) error {
-	return s.userRepo.Delete(ctx, userID)
+func (s *AuthService) DeleteUser(userID string) error {
+	return s.userRepo.Delete(userID)
 }
