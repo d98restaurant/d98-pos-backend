@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"net/http"
 	"strconv"
 
 	"pos-backend/internal/models"

@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"net/http"
 
 	"pos-backend/internal/models"
 	"pos-backend/internal/services"

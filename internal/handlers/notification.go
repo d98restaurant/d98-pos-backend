@@ -45,5 +45,5 @@ func (h *NotificationHandler) Unsubscribe(c *gin.Context) {
 }
 
 func (h *NotificationHandler) GetVAPIDPublicKey(c *gin.Context) {
-	utils.SuccessResponse(c, gin.H{"publicKey": services.GetVAPIDPublicKey()})
+	utils.SuccessResponse(c, gin.H{"publicKey": h.service.GetVAPIDPublicKey()})
 }
