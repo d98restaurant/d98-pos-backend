@@ -27,15 +27,20 @@ func (s *AuthService) Login(username, password string) (*models.AuthResponse, er
 	
 	user, err := s.userRepo.FindByUsername(username)
 	if err != nil {
+		log.Printf("Error finding user: %v", err)
 		return nil, errors.New("invalid username or password")
 	}
 	if user == nil {
+		log.Printf("User not found: %s", username)
 		return nil, errors.New("invalid username or password")
 	}
 	
-	// Direct string comparison (plain text)
+	log.Printf("Found user: %s, stored password: '%s'", user.Username, user.PasswordHash)
+	log.Printf("Provided password: '%s'", password)
+	
+	// Direct comparison
 	if user.PasswordHash != password {
-		log.Printf("❌ Password mismatch for: %s", username)
+		log.Printf("Password mismatch!")
 		return nil, errors.New("invalid username or password")
 	}
 	
@@ -71,7 +76,7 @@ func (s *AuthService) Login(username, password string) (*models.AuthResponse, er
 }
 
 func (s *AuthService) Register(req *models.RegisterRequest) (*models.AuthResponse, error) {
-	log.Printf("📝 Register: %s", req.Username)
+	log.Printf("📝 Register: %s with password: '%s'", req.Username, req.Password)
 	
 	// Check if username exists
 	existing, _ := s.userRepo.FindByUsername(req.Username)
@@ -95,16 +100,17 @@ func (s *AuthService) Register(req *models.RegisterRequest) (*models.AuthRespons
 	user := &models.User{
 		Username:     req.Username,
 		Email:        req.Email,
-		PasswordHash: req.Password, // Plain text
+		PasswordHash: req.Password, // Store exactly as provided
 		Role:         role,
 		Active:       true,
 	}
 	
 	if err := s.userRepo.Create(user); err != nil {
+		log.Printf("Create error: %v", err)
 		return nil, err
 	}
 	
-	log.Printf("✅ User created: %s (ID: %s)", user.Username, user.ID)
+	log.Printf("✅ User created: %s (ID: %s) with password: '%s'", user.Username, user.ID, user.PasswordHash)
 	
 	// Generate token
 	token, err := utils.GenerateJWT(
