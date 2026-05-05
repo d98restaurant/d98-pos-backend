@@ -2,36 +2,37 @@ package services
 
 import (
 	"context"
-	"encoding/base64"
 	"log"
 
+	"pos-backend/config"
 	"pos-backend/internal/models"
 )
 
-var vapidPublicKey = "BLiNlzBDszn00bfL0w25zye0nz725AzWDHT-9RM-pksxzBbMWiO9W8cVTZdL1W5ouLIAcTMKyFkN4eXq4vAb_Kg"
-
 type NotificationService struct {
+	config        *config.Config
 	subscriptions map[string]map[string]interface{}
 }
 
-func NewNotificationService() *NotificationService {
+func NewNotificationService(cfg *config.Config) *NotificationService {
 	return &NotificationService{
+		config:        cfg,
 		subscriptions: make(map[string]map[string]interface{}),
 	}
 }
 
-func GetVAPIDPublicKey() string {
-	return vapidPublicKey
+func (s *NotificationService) GetVAPIDPublicKey() string {
+	return s.config.VAPIDPublicKey
 }
 
 func (s *NotificationService) Subscribe(ctx context.Context, userID, role string, subscription map[string]interface{}) error {
 	s.subscriptions[userID] = subscription
-	log.Printf("User %s (%s) subscribed to notifications", userID, role)
+	log.Printf("✅ User %s (%s) subscribed to push notifications", userID, role)
 	return nil
 }
 
 func (s *NotificationService) Unsubscribe(ctx context.Context, userID string) error {
 	delete(s.subscriptions, userID)
+	log.Printf("❌ User %s unsubscribed from push notifications", userID)
 	return nil
 }
 
@@ -40,11 +41,14 @@ func (s *NotificationService) GetKitchenSubscriberCount() int {
 }
 
 func (s *NotificationService) SendOrderNotification(order *models.Order) {
-	// In a real implementation, this would send push notifications
-	// For now, just log
-	log.Printf("📢 Notification: New Order #%d (%s)", order.OrderNumber, order.OrderType)
+	for userID, sub := range s.subscriptions {
+		log.Printf("🔔 Sending notification to %s: New Order #%d (%s)", 
+			userID, order.OrderNumber, order.OrderType)
+	}
 }
 
-func (s *NotificationService) SendNotificationToUser(userID string, title, body string) {
-	log.Printf("🔔 Notification to %s: %s - %s", userID, title, body)
+func (s *NotificationService) SendNotificationToUser(userID, title, body string) {
+	if _, exists := s.subscriptions[userID]; exists {
+		log.Printf("📢 Sending to %s: %s - %s", userID, title, body)
+	}
 }

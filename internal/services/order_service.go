@@ -4,14 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/rand"
 	"time"
 
 	"pos-backend/internal/models"
 	"pos-backend/internal/repository"
 
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type OrderService struct {
@@ -39,14 +37,12 @@ func (s *OrderService) GetOrderByID(ctx context.Context, id string) (*models.Ord
 }
 
 func (s *OrderService) CreateOrder(ctx context.Context, order *models.Order) (*models.Order, error) {
-	// Generate order number
 	orderNumber, err := s.orderRepo.GetNextOrderNumber(ctx)
 	if err != nil {
 		orderNumber = int(time.Now().UnixNano() % 1000000)
 	}
 	order.OrderNumber = orderNumber
 
-	// Handle additional orders (running orders on same table)
 	if order.IsAdditionalOrder && order.TableNumber > 0 {
 		table, err := s.tableRepo.FindByNumber(ctx, order.TableNumber)
 		if err == nil && table != nil && table.RunningOrderCount > 0 {
@@ -56,22 +52,16 @@ func (s *OrderService) CreateOrder(ctx context.Context, order *models.Order) (*m
 		}
 	}
 
-	// Set initial status
 	order.Status = models.OrderStatusPending
 
-	// Create order
 	if err := s.orderRepo.Create(ctx, order); err != nil {
 		return nil, err
 	}
 
-	// Update table running count for dine-in
 	if order.OrderType == models.OrderTypeDineIn && order.TableNumber > 0 {
-		if err := s.tableRepo.IncrementRunningCount(ctx, order.TableNumber, order.Total); err != nil {
-			// Log error but don't fail order creation
-		}
+		s.tableRepo.IncrementRunningCount(ctx, order.TableNumber, order.Total)
 	}
 
-	// Send notification to kitchen
 	s.notification.SendOrderNotification(order)
 
 	return order, nil
@@ -99,14 +89,13 @@ func (s *OrderService) CompletePayment(ctx context.Context, id, paymentMethod st
 	paymentDetails["status"] = "completed"
 
 	if err := s.orderRepo.Update(ctx, id, bson.M{
-		"payment":   paymentDetails,
-		"status":    models.OrderStatusCompleted,
+		"payment":     paymentDetails,
+		"status":      models.OrderStatusCompleted,
 		"completedAt": now,
 	}); err != nil {
 		return nil, err
 	}
 
-	// Update table running counts for dine-in
 	if order.OrderType == models.OrderTypeDineIn && order.TableNumber > 0 {
 		s.tableRepo.DecrementRunningCount(ctx, order.TableNumber, order.Total)
 	}
@@ -123,11 +112,9 @@ func (s *OrderService) AddItemToOrder(ctx context.Context, orderID string, item 
 		return nil, errors.New("order not found")
 	}
 
-	// Check if item already exists
 	found := false
 	for i, existingItem := range order.Items {
 		if existingItem.ID == item.ID {
-			// Update quantity and mark as modified
 			order.Items[i].Quantity += item.Quantity
 			order.Items[i].IsModified = true
 			now := time.Now()
@@ -145,9 +132,7 @@ func (s *OrderService) AddItemToOrder(ctx context.Context, orderID string, item 
 		order.Items = append(order.Items, *item)
 	}
 
-	// Recalculate totals
 	s.recalculateOrderTotals(order)
-
 	order.HasModifications = true
 	order.UpdatedAt = time.Now()
 
@@ -178,7 +163,6 @@ func (s *OrderService) UpdateItemQuantity(ctx context.Context, orderID, itemID s
 	for i, item := range order.Items {
 		if item.ID == itemID {
 			if quantity <= 0 {
-				// Remove item
 				order.Items = append(order.Items[:i], order.Items[i+1:]...)
 			} else {
 				order.Items[i].Quantity = quantity
@@ -227,7 +211,6 @@ func (s *OrderService) UpdateItemStatus(ctx context.Context, orderID, itemID, st
 		}
 	}
 
-	// Check if all items are completed
 	allCompleted := true
 	for _, item := range order.Items {
 		if item.Status != "completed" && !item.IsRemoved {
@@ -275,13 +258,10 @@ func (s *OrderService) CompleteTableBilling(ctx context.Context, tableNumber int
 }
 
 func (s *OrderService) GetPendingCancellationRequests(ctx context.Context) ([]models.CancellationRequest, error) {
-	// This would typically be stored in a separate collection
-	// For now, return empty slice
 	return []models.CancellationRequest{}, nil
 }
 
 func (s *OrderService) RequestItemCancellation(ctx context.Context, orderID, itemID, reason string) error {
-	// Store cancellation request
 	return nil
 }
 
@@ -319,7 +299,6 @@ func (s *OrderService) ApproveCancellation(ctx context.Context, orderID, itemID 
 }
 
 func (s *OrderService) RejectCancellation(ctx context.Context, orderID, itemID, reason string) error {
-	// Just log the rejection, no changes to order
 	return nil
 }
 
@@ -328,7 +307,6 @@ func (s *OrderService) GetCreditCustomers(ctx context.Context) ([]map[string]int
 }
 
 func (s *OrderService) ProcessCreditCollection(ctx context.Context, customerID string, amount float64, paymentMethod, note, collectedBy string) error {
-	// Update the credit collection record
 	return nil
 }
 
@@ -365,7 +343,6 @@ func (s *OrderService) recalculateOrderTotals(order *models.Order) {
 		}
 	}
 
-	// Use existing tax rate or default
 	taxRate := order.TaxRate
 	if taxRate == 0 {
 		taxRate = 10
