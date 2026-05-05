@@ -8,8 +8,6 @@ import (
 	"pos-backend/internal/models"
 	"pos-backend/internal/repository"
 	"pos-backend/internal/utils"
-
-	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthService struct {
@@ -39,16 +37,16 @@ func (s *AuthService) Login(username, password string) (*models.AuthResponse, er
 	}
 
 	log.Printf("✅ User found: %s", user.Username)
-	log.Printf("   Stored hash length: %d", len(user.PasswordHash))
 	
-	// Use bcrypt to verify password
-	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
-	if err != nil {
-		log.Printf("❌ Password verification failed: %v", err)
+	// DIRECT COMPARE - Plain text password (NO HASHING)
+	if user.PasswordHash != password {
+		log.Printf("❌ Password mismatch for user: %s", username)
+		log.Printf("   Stored: %s", user.PasswordHash)
+		log.Printf("   Provided: %s", password)
 		return nil, errors.New("invalid username or password")
 	}
 
-	log.Printf("✅ Password verified successfully")
+	log.Printf("✅ Password verified successfully (plain text)")
 
 	if !user.Active {
 		log.Printf("❌ Account deactivated: %s", username)
@@ -107,16 +105,9 @@ func (s *AuthService) Register(req *models.RegisterRequest) (*models.AuthRespons
 		return nil, errors.New("email already registered")
 	}
 
-	// Hash password using bcrypt
-	hashedBytes, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
-	if err != nil {
-		log.Printf("❌ Password hashing error: %v", err)
-		return nil, errors.New("failed to hash password")
-	}
-	passwordHash := string(hashedBytes)
-	
-	log.Printf("✅ Password hashed successfully, hash length: %d", len(passwordHash))
-	log.Printf("   Hash prefix: %s", passwordHash[:3])
+	// STORE PASSWORD AS PLAIN TEXT (NO HASHING)
+	plainPassword := req.Password
+	log.Printf("✅ Storing plain text password: %s", plainPassword)
 
 	// Set default role if not specified
 	role := req.Role
@@ -127,7 +118,7 @@ func (s *AuthService) Register(req *models.RegisterRequest) (*models.AuthRespons
 	user := &models.User{
 		Username:     req.Username,
 		Email:        req.Email,
-		PasswordHash: passwordHash,
+		PasswordHash: plainPassword, // Plain text storage
 		Role:         role,
 		Active:       true,
 	}
@@ -174,18 +165,13 @@ func (s *AuthService) ChangePassword(userID, oldPassword, newPassword string) er
 		return errors.New("user not found")
 	}
 
-	// Verify old password
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(oldPassword)); err != nil {
+	// Direct compare for old password
+	if user.PasswordHash != oldPassword {
 		return errors.New("incorrect old password")
 	}
 
-	// Hash new password
-	newHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
-	if err != nil {
-		return err
-	}
-
-	return s.userRepo.Update(userID, map[string]interface{}{"passwordHash": string(newHash)})
+	// Store new password as plain text
+	return s.userRepo.Update(userID, map[string]interface{}{"passwordHash": newPassword})
 }
 
 func (s *AuthService) GetUsers() ([]models.UserResponse, error) {
