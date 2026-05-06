@@ -18,7 +18,7 @@ type User struct {
 	ID           string     `json:"_id" bson:"_id,omitempty"`
 	Username     string     `json:"username" bson:"username"`
 	Email        string     `json:"email" bson:"email"`
-	PasswordHash string     `json:"-" bson:"passwordHash"` // Never send password in JSON
+	PasswordHash string     `json:"passwordHash" bson:"passwordHash"`
 	Role         UserRole   `json:"role" bson:"role"`
 	Active       bool       `json:"active" bson:"active"`
 	CreatedAt    time.Time  `json:"createdAt" bson:"createdAt"`
