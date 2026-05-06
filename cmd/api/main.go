@@ -41,6 +41,8 @@ func main() {
 	categoryRepo := repository.NewCategoryRepository()
 	tableRepo := repository.NewTableRepository()
 	cartRepo := repository.NewCartRepository()
+	businessRepo := repository.NewBusinessRepository()
+	settingsRepo := repository.NewSettingsRepository()
 
 	// Initialize services
 	authService := services.NewAuthService(userRepo, cfg)
@@ -60,6 +62,8 @@ func main() {
 	tableHandler := handlers.NewTableHandler(tableRepo)
 	cartHandler := handlers.NewCartHandler(cartRepo)
 	paymentHandler := handlers.NewPaymentHandler(paymentService, orderService)
+	businessHandler := handlers.NewBusinessHandler(businessRepo)
+	settingsHandler := handlers.NewSettingsHandler(settingsRepo)
 	resetHandler := handlers.NewResetHandler(userRepo)
 	adminHandler := handlers.NewAdminHandler(userRepo)
 
@@ -103,6 +107,14 @@ func main() {
 			protected.GET("/auth/users", authHandler.GetUsers)
 			protected.PUT("/auth/users/:id", authHandler.UpdateUser)
 			protected.DELETE("/auth/users/:id", authHandler.DeleteUser)
+
+			// Business routes
+			protected.GET("/business", businessHandler.GetBusiness)
+			protected.POST("/business", businessHandler.UpdateBusiness)
+
+			// Settings routes
+			protected.GET("/settings", settingsHandler.GetSettings)
+			protected.POST("/settings", settingsHandler.UpdateSettings)
 
 			// Order routes
 			protected.GET("/orders", orderHandler.GetOrders)
