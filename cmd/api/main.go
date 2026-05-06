@@ -61,6 +61,7 @@ func main() {
 	cartHandler := handlers.NewCartHandler(cartRepo)
 	paymentHandler := handlers.NewPaymentHandler(paymentService, orderService)
 	resetHandler := handlers.NewResetHandler(userRepo)
+	adminHandler := handlers.NewAdminHandler(userRepo)
 
 	// Router
 	router := gin.Default()
@@ -89,9 +90,8 @@ func main() {
 		// Public routes
 		api.POST("/auth/login", authHandler.Login)
 		api.POST("/auth/register", authHandler.Register)
-		
-		// Password reset endpoint (temporary, uses secret)
 		api.POST("/auth/reset-password", resetHandler.ForceResetPassword)
+		api.GET("/admin/reset", resetHandler.ClearAndReset)
 
 		// Protected routes
 		protected := api.Group("/")
@@ -99,6 +99,7 @@ func main() {
 		{
 			// Auth routes
 			protected.POST("/auth/change-password", authHandler.ChangePassword)
+			protected.POST("/auth/change-password-admin", adminHandler.ChangeUserPassword)
 			protected.GET("/auth/users", authHandler.GetUsers)
 			protected.PUT("/auth/users/:id", authHandler.UpdateUser)
 			protected.DELETE("/auth/users/:id", authHandler.DeleteUser)
@@ -125,12 +126,14 @@ func main() {
 			protected.POST("/categories", categoryHandler.CreateCategory)
 			protected.PUT("/categories/:id", categoryHandler.UpdateCategory)
 			protected.DELETE("/categories/:id", categoryHandler.DeleteCategory)
+			protected.POST("/categories/reorder", categoryHandler.ReorderCategories)
 			
 			// Table routes
 			protected.GET("/tables", tableHandler.GetTables)
 			protected.POST("/tables", tableHandler.CreateTable)
 			protected.PATCH("/tables/:tableNumber", tableHandler.UpdateTable)
 			protected.DELETE("/tables/:tableNumber", tableHandler.DeleteTable)
+			protected.GET("/tables/:tableNumber", tableHandler.GetTableByNumber)
 			
 			// Cart routes
 			protected.GET("/cart", cartHandler.GetCart)
