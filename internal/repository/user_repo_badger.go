@@ -26,7 +26,6 @@ func (r *UserRepository) Create(user *models.User) error {
 	user.ID = fmt.Sprintf("%d", time.Now().UnixNano())
 	
 	log.Printf("📝 Creating user: %s with ID: %s", user.Username, user.ID)
-	log.Printf("   Password length: %d", len(user.PasswordHash))
 	
 	// Save by ID
 	if err := SaveJSON("user:"+user.ID, user); err != nil {
@@ -80,6 +79,7 @@ func (r *UserRepository) FindByID(id string) (*models.User, error) {
 
 func (r *UserRepository) FindAll() ([]models.User, error) {
 	var users []models.User
+	
 	err := DB.View(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
 		it := txn.NewIterator(opts)
@@ -88,16 +88,32 @@ func (r *UserRepository) FindAll() ([]models.User, error) {
 		prefix := []byte("user:")
 		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 			key := string(it.Item().Key())
-			// Skip index keys
-			if len(key) > 13 && (key[5:13] == "username:" || key[5:10] == "email:") {
-				continue
+			
+			// Skip index keys - they have ":username:" or ":email:" in them
+			if len(key) > 5 {
+				// Check if this is an index key
+				isIndexKey := false
+				for i := 5; i < len(key); i++ {
+					if i+9 <= len(key) && key[i:i+9] == ":username" {
+						isIndexKey = true
+						break
+					}
+					if i+7 <= len(key) && key[i:i+7] == ":email:" {
+						isIndexKey = true
+						break
+					}
+				}
+				if isIndexKey {
+					continue
+				}
 			}
 			
 			item := it.Item()
 			err := item.Value(func(val []byte) error {
 				var user models.User
 				if err := json.Unmarshal(val, &user); err != nil {
-					return err
+					log.Printf("⚠️ Error unmarshaling user from key %s: %v", key, err)
+					return nil // Skip this entry
 				}
 				users = append(users, user)
 				return nil
@@ -108,6 +124,8 @@ func (r *UserRepository) FindAll() ([]models.User, error) {
 		}
 		return nil
 	})
+	
+	log.Printf("📋 Found %d users in database", len(users))
 	return users, err
 }
 
