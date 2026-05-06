@@ -27,24 +27,19 @@ func (s *AuthService) Login(username, password string) (*models.AuthResponse, er
 	
 	user, err := s.userRepo.FindByUsername(username)
 	if err != nil {
-		log.Printf("Error finding user: %v", err)
 		return nil, errors.New("invalid username or password")
 	}
 	if user == nil {
-		log.Printf("User not found: %s", username)
 		return nil, errors.New("invalid username or password")
 	}
 	
-	log.Printf("Found user: %s, stored password: '%s'", user.Username, user.PasswordHash)
-	log.Printf("Provided password: '%s'", password)
-	
 	// Direct comparison
-	err = utils.CheckPassword(password, user.PasswordHash)
-if err != nil {
-    return nil, errors.New("invalid username or password")
-}
+	if user.PasswordHash != password {
+		log.Printf("Password mismatch for: %s", username)
+		return nil, errors.New("invalid username or password")
+	}
 	
-	log.Printf("✅ Login successful: %s", username)
+	log.Printf("✅ Login successful: %s (role: %s)", username, user.Role)
 	
 	// Update last login
 	go s.userRepo.UpdateLastLogin(user.ID)
@@ -76,7 +71,7 @@ if err != nil {
 }
 
 func (s *AuthService) Register(req *models.RegisterRequest) (*models.AuthResponse, error) {
-	log.Printf("📝 Register: %s with password: '%s'", req.Username, req.Password)
+	log.Printf("📝 Register: %s", req.Username)
 	
 	// Check if username exists
 	existing, _ := s.userRepo.FindByUsername(req.Username)
@@ -90,31 +85,27 @@ func (s *AuthService) Register(req *models.RegisterRequest) (*models.AuthRespons
 		return nil, errors.New("email already registered")
 	}
 	
-	// Set role
-	role := req.Role
-	if role == "" {
-		role = models.RoleCashier
-	}
+	// ALWAYS SET ROLE TO ADMIN for new users
+	// This ensures first user has full access
+	role := models.RoleAdmin
 	
-hashedPassword, err := utils.HashPassword(req.Password)
-if err != nil {
-    return nil, err
-}
-
-user := &models.User{
-    Username:     req.Username,
-    Email:        req.Email,
-    PasswordHash: hashedPassword,
-    Role:         role,
-    Active:       true,
-}
+	log.Printf("Setting role: %s for new user: %s", role, req.Username)
+	
+	// Create user with plain text password
+	user := &models.User{
+		Username:     req.Username,
+		Email:        req.Email,
+		PasswordHash: req.Password,
+		Role:         role,
+		Active:       true,
+	}
 	
 	if err := s.userRepo.Create(user); err != nil {
 		log.Printf("Create error: %v", err)
 		return nil, err
 	}
 	
-	log.Printf("✅ User created: %s (ID: %s) with password: '%s'", user.Username, user.ID, user.PasswordHash)
+	log.Printf("✅ User created: %s (ID: %s) with role: %s", user.Username, user.ID, user.Role)
 	
 	// Generate token
 	token, err := utils.GenerateJWT(
