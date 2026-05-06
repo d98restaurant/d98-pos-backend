@@ -15,50 +15,28 @@ func NewResetHandler(userRepo *repository.UserRepository) *ResetHandler {
 	return &ResetHandler{userRepo: userRepo}
 }
 
-func (h *ResetHandler) ForceResetPassword(c *gin.Context) {
-	var req struct {
-		Username string `json:"username"`
-		Password string `json:"password"`
-		Secret   string `json:"secret"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.ErrorResponse(c, 400, "Invalid request")
-		return
-	}
-
-	// Security: Use a secret key to prevent unauthorized resets
-	if req.Secret != "pos-reset-2024" {
+func (h *ResetHandler) ClearAndReset(c *gin.Context) {
+	secret := c.Query("secret")
+	
+	if secret != "reset2024" {
 		utils.ErrorResponse(c, 403, "Unauthorized")
 		return
 	}
-
-	// Find user
-	user, err := h.userRepo.FindByUsername(req.Username)
-	if err != nil || user == nil {
-		utils.ErrorResponse(c, 404, "User not found")
-		return
-	}
-
-	// Hash new password
-	newHash, err := utils.HashPassword(req.Password)
+	
+	// Clear all user data
+	err := repository.ClearAllUsers()
 	if err != nil {
-		utils.ErrorResponse(c, 500, "Failed to hash password")
+		utils.ErrorResponse(c, 500, err.Error())
 		return
 	}
-
-	// Update password
-	err = h.userRepo.Update(user.ID, map[string]interface{}{
-		"passwordHash": newHash,
-	})
-
-	if err != nil {
-		utils.ErrorResponse(c, 500, "Failed to update password")
-		return
+	
+	// Create a default admin user
+	defaultUser := map[string]interface{}{
+		"username": "admin",
+		"email":    "admin@pos.com",
+		"password": "admin123",
+		"role":     "admin",
 	}
-
-	utils.SuccessResponse(c, gin.H{
-		"message":  "Password reset successfully",
-		"username": req.Username,
-	})
+	
+	utils.SuccessResponse(c, defaultUser)
 }
