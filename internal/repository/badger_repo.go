@@ -135,3 +135,28 @@ func ClearAllUsers() error {
 		return nil
 	})
 }
+
+// ClearAllUsers removes all user data from the database
+func ClearAllUsers() error {
+	return DB.Update(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.PrefetchValues = false
+		it := txn.NewIterator(opts)
+		defer it.Close()
+
+		prefix := []byte("user:")
+		var keys [][]byte
+
+		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+			keys = append(keys, it.Item().KeyCopy(nil))
+		}
+
+		for _, key := range keys {
+			if err := txn.Delete(key); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
