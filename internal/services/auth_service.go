@@ -39,10 +39,10 @@ func (s *AuthService) Login(username, password string) (*models.AuthResponse, er
 	log.Printf("Provided password: '%s'", password)
 	
 	// Direct comparison
-	if user.PasswordHash != password {
-		log.Printf("Password mismatch!")
-		return nil, errors.New("invalid username or password")
-	}
+	err = utils.CheckPassword(password, user.PasswordHash)
+if err != nil {
+    return nil, errors.New("invalid username or password")
+}
 	
 	log.Printf("✅ Login successful: %s", username)
 	
@@ -96,14 +96,18 @@ func (s *AuthService) Register(req *models.RegisterRequest) (*models.AuthRespons
 		role = models.RoleCashier
 	}
 	
-	// Create user with plain text password
-	user := &models.User{
-		Username:     req.Username,
-		Email:        req.Email,
-		PasswordHash: req.Password, // Store exactly as provided
-		Role:         role,
-		Active:       true,
-	}
+hashedPassword, err := utils.HashPassword(req.Password)
+if err != nil {
+    return nil, err
+}
+
+user := &models.User{
+    Username:     req.Username,
+    Email:        req.Email,
+    PasswordHash: hashedPassword,
+    Role:         role,
+    Active:       true,
+}
 	
 	if err := s.userRepo.Create(user); err != nil {
 		log.Printf("Create error: %v", err)
