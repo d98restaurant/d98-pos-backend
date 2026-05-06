@@ -23,28 +23,40 @@ func NewAuthService(userRepo *repository.UserRepository, cfg *config.Config) *Au
 }
 
 func (s *AuthService) Login(username, password string) (*models.AuthResponse, error) {
-	log.Printf("🔐 Login: %s", username)
+	log.Printf("🔐 Login attempt: %s", username)
 	
+	// Find user by username
 	user, err := s.userRepo.FindByUsername(username)
 	if err != nil {
+		log.Printf("❌ Database error: %v", err)
 		return nil, errors.New("invalid username or password")
 	}
+	
 	if user == nil {
+		log.Printf("❌ User not found: %s", username)
 		return nil, errors.New("invalid username or password")
 	}
 	
-	// Direct comparison
+	log.Printf("✅ User found: %s", user.Username)
+	
+	// Check password (plain text comparison)
 	if user.PasswordHash != password {
-		log.Printf("Password mismatch for: %s", username)
+		log.Printf("❌ Password mismatch for: %s", username)
 		return nil, errors.New("invalid username or password")
 	}
 	
-	log.Printf("✅ Login successful: %s (role: %s)", username, user.Role)
+	log.Printf("✅ Password verified for: %s", username)
+	
+	// Check if account is active
+	if !user.Active {
+		log.Printf("❌ Account deactivated: %s", username)
+		return nil, errors.New("account is deactivated. Please contact admin.")
+	}
 	
 	// Update last login
 	go s.userRepo.UpdateLastLogin(user.ID)
 	
-	// Generate token
+	// Generate JWT token
 	token, err := utils.GenerateJWT(
 		user.ID,
 		user.Username,
@@ -53,8 +65,11 @@ func (s *AuthService) Login(username, password string) (*models.AuthResponse, er
 		s.config.JWTExpiry,
 	)
 	if err != nil {
+		log.Printf("❌ Token generation error: %v", err)
 		return nil, err
 	}
+	
+	log.Printf("✅ Login successful for: %s (Role: %s)", username, user.Role)
 	
 	return &models.AuthResponse{
 		Token: token,
@@ -71,25 +86,27 @@ func (s *AuthService) Login(username, password string) (*models.AuthResponse, er
 }
 
 func (s *AuthService) Register(req *models.RegisterRequest) (*models.AuthResponse, error) {
-	log.Printf("📝 Register: %s", req.Username)
+	log.Printf("📝 Register attempt: %s", req.Username)
 	
 	// Check if username exists
 	existing, _ := s.userRepo.FindByUsername(req.Username)
 	if existing != nil {
+		log.Printf("❌ Username already exists: %s", req.Username)
 		return nil, errors.New("username already exists")
 	}
 	
 	// Check if email exists
 	existingEmail, _ := s.userRepo.FindByEmail(req.Email)
 	if existingEmail != nil {
+		log.Printf("❌ Email already registered: %s", req.Email)
 		return nil, errors.New("email already registered")
 	}
 	
-	// ALWAYS SET ROLE TO ADMIN for new users
-	// This ensures first user has full access
-	role := models.RoleAdmin
-	
-	log.Printf("Setting role: %s for new user: %s", role, req.Username)
+	// Set role (default to cashier for security)
+	role := req.Role
+	if role == "" {
+		role = models.RoleCashier
+	}
 	
 	// Create user with plain text password
 	user := &models.User{
@@ -101,11 +118,11 @@ func (s *AuthService) Register(req *models.RegisterRequest) (*models.AuthRespons
 	}
 	
 	if err := s.userRepo.Create(user); err != nil {
-		log.Printf("Create error: %v", err)
+		log.Printf("❌ User creation error: %v", err)
 		return nil, err
 	}
 	
-	log.Printf("✅ User created: %s (ID: %s) with role: %s", user.Username, user.ID, user.Role)
+	log.Printf("✅ User created: %s (ID: %s, Role: %s)", user.Username, user.ID, user.Role)
 	
 	// Generate token
 	token, err := utils.GenerateJWT(
@@ -151,9 +168,12 @@ func (s *AuthService) GetUsers() ([]models.UserResponse, error) {
 		return nil, err
 	}
 	
-	responses := make([]models.UserResponse, len(users))
-	for i, user := range users {
-		responses[i] = models.UserResponse{
+	responses := make([]models.UserResponse, 0, len(users))
+	for _, user := range users {
+		if user.ID == "" || user.Username == "" {
+			continue
+		}
+		responses = append(responses, models.UserResponse{
 			ID:        user.ID,
 			Username:  user.Username,
 			Email:     user.Email,
@@ -161,8 +181,10 @@ func (s *AuthService) GetUsers() ([]models.UserResponse, error) {
 			Active:    user.Active,
 			CreatedAt: user.CreatedAt,
 			LastLogin: user.LastLogin,
-		}
+		})
 	}
+	
+	log.Printf("📋 Returning %d users", len(responses))
 	return responses, nil
 }
 
