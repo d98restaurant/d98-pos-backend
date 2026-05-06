@@ -25,13 +25,13 @@ func (h *BusinessHandler) GetBusiness(c *gin.Context) {
 	if business == nil {
 		// Return default business details
 		utils.SuccessResponse(c, map[string]interface{}{
-			"name":                "My Restaurant",
-			"address":             "123 Main Street",
-			"phone":               "+91 9876543210",
-			"email":               "info@restaurant.com",
-			"gst":                 "27ABCDE1234F1Z5",
-			"fssai":               "12345678901234",
-			"upiId":               "paytm.s1yxcay@pty",
+			"name":                "",
+			"address":             "",
+			"phone":               "",
+			"email":               "",
+			"gst":                 "",
+			"fssai":               "",
+			"upiId":               "",
 			"currencySymbol":      "₹",
 			"taxLabel":            "GST",
 			"footerMessage":       "Thank you! Visit Again!",
@@ -52,7 +52,34 @@ func (h *BusinessHandler) GetBusiness(c *gin.Context) {
 		return
 	}
 
-	utils.SuccessResponse(c, business)
+	// Clean up the response - remove nested data structures
+	cleanBusiness := map[string]interface{}{
+		"name":                getString(business, "name"),
+		"address":             getString(business, "address"),
+		"phone":               getString(business, "phone"),
+		"email":               getString(business, "email"),
+		"gst":                 getString(business, "gst"),
+		"fssai":               getString(business, "fssai"),
+		"upiId":               getString(business, "upiId"),
+		"currencySymbol":      getString(business, "currencySymbol"),
+		"taxLabel":            getString(business, "taxLabel"),
+		"footerMessage":       getString(business, "footerMessage"),
+		"printBusinessName":   getBool(business, "printBusinessName", true),
+		"printAddress":        getBool(business, "printAddress", true),
+		"printPhone":          getBool(business, "printPhone", true),
+		"printEmail":          getBool(business, "printEmail", true),
+		"printGst":            getBool(business, "printGst", true),
+		"printFssai":          getBool(business, "printFssai", true),
+		"printHeaderDivider":  getBool(business, "printHeaderDivider", true),
+		"printItems":          getBool(business, "printItems", true),
+		"printTaxBreakdown":   getBool(business, "printTaxBreakdown", true),
+		"printServiceCharge":  getBool(business, "printServiceCharge", true),
+		"printGatewayCharges": getBool(business, "printGatewayCharges", true),
+		"printFooter":         getBool(business, "printFooter", true),
+		"printQrCode":         getBool(business, "printQrCode", true),
+	}
+
+	utils.SuccessResponse(c, cleanBusiness)
 }
 
 func (h *BusinessHandler) UpdateBusiness(c *gin.Context) {
@@ -62,10 +89,55 @@ func (h *BusinessHandler) UpdateBusiness(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.Update(business); err != nil {
+	// Clean the data before saving
+	cleanBusiness := map[string]interface{}{
+		"name":                getString(business, "name"),
+		"address":             getString(business, "address"),
+		"phone":               getString(business, "phone"),
+		"email":               getString(business, "email"),
+		"gst":                 getString(business, "gst"),
+		"fssai":               getString(business, "fssai"),
+		"upiId":               getString(business, "upiId"),
+		"currencySymbol":      getString(business, "currencySymbol"),
+		"taxLabel":            getString(business, "taxLabel"),
+		"footerMessage":       getString(business, "footerMessage"),
+		"printBusinessName":   getBool(business, "printBusinessName", true),
+		"printAddress":        getBool(business, "printAddress", true),
+		"printPhone":          getBool(business, "printPhone", true),
+		"printEmail":          getBool(business, "printEmail", true),
+		"printGst":            getBool(business, "printGst", true),
+		"printFssai":          getBool(business, "printFssai", true),
+		"printHeaderDivider":  getBool(business, "printHeaderDivider", true),
+		"printItems":          getBool(business, "printItems", true),
+		"printTaxBreakdown":   getBool(business, "printTaxBreakdown", true),
+		"printServiceCharge":  getBool(business, "printServiceCharge", true),
+		"printGatewayCharges": getBool(business, "printGatewayCharges", true),
+		"printFooter":         getBool(business, "printFooter", true),
+		"printQrCode":         getBool(business, "printQrCode", true),
+	}
+
+	if err := h.repo.Update(cleanBusiness); err != nil {
 		utils.ErrorResponse(c, 500, "Failed to save business details: "+err.Error())
 		return
 	}
 
-	utils.SuccessResponse(c, business)
+	utils.SuccessResponse(c, cleanBusiness)
+}
+
+func getString(m map[string]interface{}, key string) string {
+	if val, ok := m[key]; ok {
+		if str, ok := val.(string); ok {
+			return str
+		}
+	}
+	return ""
+}
+
+func getBool(m map[string]interface{}, key string, defaultValue bool) bool {
+	if val, ok := m[key]; ok {
+		if b, ok := val.(bool); ok {
+			return b
+		}
+	}
+	return defaultValue
 }
