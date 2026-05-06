@@ -20,7 +20,7 @@ func InitBadgerDB(dbPath string) (*badger.DB, error) {
 	dbOnce.Do(func() {
 		opts := badger.DefaultOptions(dbPath)
 		opts.Logger = nil
-		
+
 		DB, err = badger.Open(opts)
 		if err != nil {
 			log.Printf("Failed to open BadgerDB: %v", err)
@@ -73,7 +73,7 @@ func GetAllKeys(prefix string) ([]string, error) {
 		opts.PrefetchValues = false
 		it := txn.NewIterator(opts)
 		defer it.Close()
-		
+
 		prefixBytes := []byte(prefix)
 		for it.Seek(prefixBytes); it.ValidForPrefix(prefixBytes); it.Next() {
 			keys = append(keys, string(it.Item().Key()))
@@ -89,7 +89,6 @@ func GetNextSequence(seqName string) (uint64, error) {
 		key := []byte("seq_" + seqName)
 		item, err := txn.Get(key)
 		if err == badger.ErrKeyNotFound {
-			// Use timestamp-based ID to ensure uniqueness
 			seq = uint64(time.Now().UnixNano())
 		} else if err != nil {
 			return err
@@ -109,31 +108,6 @@ func GetNextSequence(seqName string) (uint64, error) {
 		return txn.Set(key, []byte(strconv.FormatUint(seq, 10)))
 	})
 	return seq, err
-}
-
-// ClearAllUsers removes all user data from the database
-func ClearAllUsers() error {
-	return DB.Update(func(txn *badger.Txn) error {
-		opts := badger.DefaultIteratorOptions
-		opts.PrefetchValues = false
-		it := txn.NewIterator(opts)
-		defer it.Close()
-		
-		prefix := []byte("user:")
-		var keys [][]byte
-		
-		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
-			keys = append(keys, it.Item().KeyCopy(nil))
-		}
-		
-		for _, key := range keys {
-			if err := txn.Delete(key); err != nil {
-				return err
-			}
-		}
-		
-		return nil
-	})
 }
 
 // ClearAllUsers removes all user data from the database
